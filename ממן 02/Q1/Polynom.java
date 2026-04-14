@@ -7,7 +7,7 @@ import java.util.ArrayList;
  */
 public class Polynom
 {
-    private ArrayList<double[]> polynom;
+    private ArrayList<Term> polynom;
 
     /**
      * Polynom constructor.
@@ -17,15 +17,39 @@ public class Polynom
         if (bases.length != powers.length)
             throw new Exception("bases array length must be equal to powers array length");
 
-        polynom = new ArrayList<double[]>();
+        polynom = new ArrayList<Term>();
 
         for (int i = 0; i < bases.length; i++)
         {
-            double[] element = new double[2];
-            element[0] = bases[i];
-            element[1] = powers[i];
-            polynom.add(element);
+            double currentBase = bases[i];
+            int currentPower = powers[i];
+
+            if (currentBase == 0)
+                continue;
+
+            boolean powerExists = false;
+
+            for (int j = 0; j < polynom.size(); j++)
+            {
+                Term existingTerm = polynom.get(j);
+
+                if (existingTerm.getPower() == currentPower)
+                {
+                    double newBase = existingTerm.getBase() + currentBase;
+                    existingTerm.setBase(newBase);
+                    powerExists = true;
+
+                    if (newBase == 0)
+                        polynom.remove(j);
+                    break;
+                }
+            }
+
+            if (powerExists == false)
+                polynom.add(new Term(currentBase, currentPower));
         }
+
+
 
         //Selection Sort (sorting by highest power)
         for (int i = 0; i < polynom.size() - 1; i++)
@@ -34,13 +58,16 @@ public class Polynom
 
             for (int j = i + 1; j < polynom.size(); j++)
             {
-                if (polynom.get(j)[1] > polynom.get(biggestPowerIndex)[1])
+                int jCurrentPower =  polynom.get(j).getPower();
+                int biggestPower = polynom.get(biggestPowerIndex).getPower();
+
+                if (jCurrentPower > biggestPower)
                     biggestPowerIndex = j;
             }
 
             if (biggestPowerIndex != i)
             {
-                double[] temporary = polynom.get(i);
+                Term temporary = polynom.get(i);
                 polynom.set(i, polynom.get(biggestPowerIndex));
                 polynom.set(biggestPowerIndex, temporary);
             }
@@ -56,8 +83,9 @@ public class Polynom
 
         for (int i = 0; i < polynom.size(); i++)
         {
-            double base = polynom.get(i)[0];
-            int power = (int) polynom.get(i)[1];
+            Term currentTerm = polynom.get(i);
+            double base = currentTerm.getBase();
+            int power = currentTerm.getPower();
 
             // ##### Base handler #####
             if (base == 0)
@@ -65,11 +93,13 @@ public class Polynom
 
             if (str.equals(""))
             {
-                if (base == 1 && power > 0){}
-                else if (base == -1 && power > 0)
-                    str += "-";
-                else
-                    str += base;
+                if (!(base == 1 && power > 0))
+                {
+                    if (base == -1 && power > 0)
+                            str += "-";
+                    else
+                        str += base;
+                }
             }
 
             else // i != 0
@@ -121,23 +151,27 @@ public class Polynom
 
         while (i < this.polynom.size() && j < other.polynom.size())
         {
-            double thisBase = this.polynom.get(i)[0];
-            int thisPower = (int) this.polynom.get(i)[1];
+            Term thisTerm = this.polynom.get(i);
+            double thisBase = thisTerm.getBase();
+            int thisPower = thisTerm.getPower();
 
-            double otherBase = other.polynom.get(j)[0];
-            int otherPower = (int) other.polynom.get(j)[1];
+            Term otherTerm = other.polynom.get(j);
+            double otherBase = otherTerm.getBase();
+            int otherPower = otherTerm.getPower();
 
             if (thisPower > otherPower)
             {
                 combinedBases.add(thisBase);
                 combinedPowers.add(thisPower);
                 i++;
-            } else if (thisPower < otherPower)
+            }
+            else if (thisPower < otherPower)
             {
                 combinedBases.add(otherBase);
                 combinedPowers.add(otherPower);
                 j++;
-            } else //thisPower == otherPower
+            }
+            else //thisPower == otherPower
             {
                 double basesSum = thisBase + otherBase;
                 if (basesSum != 0) {
@@ -151,15 +185,17 @@ public class Polynom
 
         while (i < this.polynom.size())
         {
-            combinedBases.add(this.polynom.get(i)[0]);
-            combinedPowers.add((int) this.polynom.get(i)[1]);
+            Term restTerm = this.polynom.get(i);
+            combinedBases.add(restTerm.getBase());
+            combinedPowers.add(restTerm.getPower());
             i++;
         }
 
         while (j < other.polynom.size())
         {
-            combinedBases.add(other.polynom.get(j)[0]);
-            combinedPowers.add((int) other.polynom.get(j)[1]);
+            Term restTerm = other.polynom.get(j);
+            combinedBases.add(restTerm.getBase());
+            combinedPowers.add(restTerm.getPower());
             j++;
         }
 
@@ -178,70 +214,26 @@ public class Polynom
 
     /**
      * Gets the result of the subtraction of other polynom from our polynom.
+     * This methods relies on plus method and on the identity A-B = A+(-B)
      */
     public Polynom minus(Polynom other) throws Exception
     {
-        ArrayList<Double> combinedBases = new ArrayList<>();
-        ArrayList<Integer> combinedPowers = new ArrayList<>();
-        int i = 0;
-        int j = 0;
+        int otherSize = other.polynom.size();
+        double[] negatedBases = new double[otherSize];
+        int[] powers = new int[otherSize];
 
-        while (i < this.polynom.size() && j < other.polynom.size())
+        for (int i = 0; i < otherSize ; i++)
         {
-            double thisBase = this.polynom.get(i)[0];
-            int thisPower = (int) this.polynom.get(i)[1];
-
-            double otherBase = other.polynom.get(j)[0];
-            int otherPower = (int) other.polynom.get(j)[1];
-
-            if (thisPower > otherPower)
-            {
-                combinedBases.add(thisBase);
-                combinedPowers.add(thisPower);
-                i++;
-            } else if (thisPower < otherPower)
-            {
-                combinedBases.add(-otherBase);
-                combinedPowers.add(otherPower);
-                j++;
-            } else //thisPower == otherPower
-            {
-                double basesSub = thisBase - otherBase;
-                if (basesSub != 0) {
-                    combinedBases.add(basesSub);
-                    combinedPowers.add(thisPower);
-                }
-                i++;
-                j++;
-            }
+            Term otherTerm = other.polynom.get(i);
+            negatedBases[i] = -(otherTerm.getBase());
+            powers[i] = otherTerm.getPower();
         }
 
-        while (i < this.polynom.size())
-        {
-            combinedBases.add(this.polynom.get(i)[0]);
-            combinedPowers.add((int) this.polynom.get(i)[1]);
-            i++;
-        }
+        Polynom otherNegated = new Polynom(negatedBases, powers);
 
-        while (j < other.polynom.size())
-        {
-            combinedBases.add(-other.polynom.get(j)[0]);
-            combinedPowers.add((int) other.polynom.get(j)[1]);
-            j++;
-        }
-
-        double[] bases = new double[combinedBases.size()];
-        int[] powers = new int[combinedPowers.size()];
-
-        for (int k = 0; k < combinedBases.size(); k++)
-        {
-            bases[k] = combinedBases.get(k);
-            powers[k] = combinedPowers.get(k);
-        }
-
-        Polynom p = new Polynom(bases, powers);
-        return p;
+        return this.plus(otherNegated);
     }
+
 
     /**
      * Gets the derivative of our polynom object.
@@ -253,10 +245,12 @@ public class Polynom
 
         for (int i = 0; i < this.polynom.size(); i++)
         {
-            double base = this.polynom.get(i)[0];
-            int power = (int) this.polynom.get(i)[1];
+            Term currentTerm = this.polynom.get(i);
+            double base = currentTerm.getBase();
+            int power = currentTerm.getPower();
 
-            if (power > 0) {
+            if (power > 0)
+            {
                 derivativeBases.add(base * power);
                 derivativePowers.add(power - 1);
             }
@@ -296,11 +290,13 @@ public class Polynom
 
         for (int i = 0; i < this.polynom.size(); i++)
         {
-            double thisBase = this.polynom.get(i)[0];
-            double otherBase = other.polynom.get(i)[0];
+            Term thisTerm = this.polynom.get(i);
+            double thisBase = thisTerm.getBase();
+            int thisPower = thisTerm.getPower();
 
-            int thisPower = (int) this.polynom.get(i)[1];
-            int otherPower = (int) other.polynom.get(i)[1];
+            Term otherTerm = other.polynom.get(i);
+            double otherBase = otherTerm.getBase();
+            int otherPower = otherTerm.getPower();
 
             if (thisBase != otherBase || thisPower != otherPower)
                 return false;
